@@ -50,9 +50,7 @@ describe("integration: full pipeline", () => {
         { client, timeout: 10000 },
         undefined,
         serverLabel,
-        efficiency,
-        quality,
-        security,
+        { efficiency, quality, security },
       );
 
       // Should have all test categories

@@ -9,6 +9,7 @@ export type {
 } from "./core/types.js";
 
 export { runTests } from "./core/runner.js";
+export type { AnalyzerResults } from "./core/runner.js";
 export { createMCPClient } from "./core/client.js";
 export type { ServerConfig } from "./core/client.js";
 export { complianceTests } from "./compliance/index.js";

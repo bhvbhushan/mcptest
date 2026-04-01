@@ -21,12 +21,30 @@ export function analyzeQuality(tools: ToolDefinition[]): QualityResult {
     };
   }
 
-  const findings: QualityFinding[] = [];
-  const toolsWithShortDescriptions: string[] = [];
-  const toolsWithVerboseDescriptions: string[] = [];
-  const deprecatedTools: string[] = [];
+  const paramResult = checkParamDescriptions(tools);
+  const descResult = checkDescriptionQuality(tools);
+  const deprecatedResult = checkDeprecatedTools(tools);
+  const duplicateResult = checkDuplicateSchemas(tools);
+  const requiredDefaultFindings = checkRequiredDefaults(tools);
 
-  // Check 1: Parameter description coverage
+  return {
+    findings: [
+      ...paramResult.findings,
+      ...descResult.findings,
+      ...deprecatedResult.findings,
+      ...duplicateResult.findings,
+      ...requiredDefaultFindings,
+    ],
+    paramDescriptionCoverage: paramResult.paramDescriptionCoverage,
+    toolsWithShortDescriptions: descResult.toolsWithShortDescriptions,
+    toolsWithVerboseDescriptions: descResult.toolsWithVerboseDescriptions,
+    deprecatedTools: deprecatedResult.deprecatedTools,
+    duplicateToolGroups: duplicateResult.duplicateToolGroups,
+  };
+}
+
+function checkParamDescriptions(tools: ToolDefinition[]) {
+  const findings: QualityFinding[] = [];
   let totalParams = 0;
   let paramsWithDesc = 0;
   const toolsMissingParamDescs: string[] = [];
@@ -68,7 +86,14 @@ export function analyzeQuality(tools: ToolDefinition[]): QualityResult {
     });
   }
 
-  // Check 2: Description quality
+  return { findings, paramDescriptionCoverage, toolsMissingParamDescs };
+}
+
+function checkDescriptionQuality(tools: ToolDefinition[]) {
+  const findings: QualityFinding[] = [];
+  const toolsWithShortDescriptions: string[] = [];
+  const toolsWithVerboseDescriptions: string[] = [];
+
   for (const tool of tools) {
     const desc = tool.description ?? "";
     if (desc.length > 0 && desc.length < 20) {
@@ -97,8 +122,14 @@ export function analyzeQuality(tools: ToolDefinition[]): QualityResult {
     });
   }
 
-  // Check 3: Deprecated tools
+  return { findings, toolsWithShortDescriptions, toolsWithVerboseDescriptions };
+}
+
+function checkDeprecatedTools(tools: ToolDefinition[]) {
+  const findings: QualityFinding[] = [];
+  const deprecatedTools: string[] = [];
   const deprecatedRegex = /\b(deprecated|obsolete)\b/i;
+
   for (const tool of tools) {
     if (tool.description && deprecatedRegex.test(tool.description)) {
       deprecatedTools.push(tool.name);
@@ -114,21 +145,29 @@ export function analyzeQuality(tools: ToolDefinition[]): QualityResult {
     });
   }
 
-  // Check 4: Duplicate tools (identical inputSchema structure)
+  return { findings, deprecatedTools };
+}
+
+function checkDuplicateSchemas(tools: ToolDefinition[]) {
+  const findings: QualityFinding[] = [];
   const duplicateToolGroups = findDuplicateSchemas(tools);
-  if (duplicateToolGroups.length > 0) {
-    for (const group of duplicateToolGroups) {
-      findings.push({
-        level: "warning",
-        category: "duplicate-tools",
-        message: `Tools with identical schemas: ${group.join(", ")}`,
-        details: group,
-      });
-    }
+
+  for (const group of duplicateToolGroups) {
+    findings.push({
+      level: "warning",
+      category: "duplicate-tools",
+      message: `Tools with identical schemas: ${group.join(", ")}`,
+      details: group,
+    });
   }
 
-  // Check 5: Required params with defaults (schema mismatch)
+  return { findings, duplicateToolGroups };
+}
+
+function checkRequiredDefaults(tools: ToolDefinition[]): QualityFinding[] {
+  const findings: QualityFinding[] = [];
   const toolsWithRequiredDefaults: string[] = [];
+
   for (const tool of tools) {
     const props = (tool.inputSchema.properties ?? {}) as Record<string, SchemaProperty>;
     const required = (tool.inputSchema.required as string[]) ?? [];
@@ -147,14 +186,7 @@ export function analyzeQuality(tools: ToolDefinition[]): QualityResult {
     });
   }
 
-  return {
-    findings,
-    paramDescriptionCoverage,
-    toolsWithShortDescriptions,
-    toolsWithVerboseDescriptions,
-    deprecatedTools,
-    duplicateToolGroups,
-  };
+  return findings;
 }
 
 function findDuplicateSchemas(tools: ToolDefinition[]): string[][] {

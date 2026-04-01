@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] - 2026-04-01
+
+### Changed
+
+- Refactored god-functions: `analyzeQuality` (147 → 5 focused helpers), `validateCommand` (extracted `runAnalyzers` + `writeOutput`), `ConsoleReporter.format` (extracted 5 section formatters), `runTests` (7 params → `AnalyzerResults` interface), `createMCPClient` (extracted `createTransport` + `createClientWrapper`)
+- Removed double type assertion (`as unknown as`) in MCP client getPrompt wrapper
+- Replaced `console.log` with `process.stdout.write`/`process.stderr.write` in CLI
+- Added meaningful assertions to client tests (over-mocking fix)
+- Extracted `dimensionScore` helper in score calculation
+- Exported `AnalyzerResults` type from public API
+
 ## [0.1.0] - 2026-04-01
 
 ### Added

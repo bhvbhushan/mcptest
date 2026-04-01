@@ -16,14 +16,27 @@ export class ConsoleReporter implements Reporter {
   }
 
   format(result: SuiteResult): string {
+    const lines: string[] = [
+      ...this.formatHeader(result),
+      ...this.formatComplianceTests(result.results),
+      ...this.formatEfficiency(result),
+      ...this.formatQuality(result),
+      ...this.formatSecurity(result),
+      this.formatSummary(result),
+      this.formatScore(result),
+      "",
+    ];
+
+    return lines.join("\n");
+  }
+
+  private formatHeader(result: SuiteResult): string[] {
+    return ["", this.bold(`mcp-quality-gate v0.1.1`), `Server: ${result.server}`, ""];
+  }
+
+  private formatComplianceTests(results: TestRunResult[]): string[] {
     const lines: string[] = [];
-
-    lines.push("");
-    lines.push(this.bold(`mcp-quality-gate v0.1.0`));
-    lines.push(`Server: ${result.server}`);
-    lines.push("");
-
-    const grouped = groupByCategory(result.results);
+    const grouped = groupByCategory(results);
 
     for (const [category, tests] of Object.entries(grouped)) {
       lines.push(this.bold(`  ${category}`));
@@ -33,53 +46,64 @@ export class ConsoleReporter implements Reporter {
       lines.push("");
     }
 
-    if (result.efficiency) {
-      lines.push(this.bold("  efficiency"));
-      lines.push(
-        `    ${result.efficiency.toolCount} tools, ~${result.efficiency.schemaTokenEstimate} schema tokens`,
-      );
-      for (const f of result.efficiency.findings) {
-        const label = f.level === "critical" ? this.red("CRIT") : this.yellow("WARN");
-        lines.push(`    ${label} ${f.message}`);
-      }
-      lines.push("");
-    }
+    return lines;
+  }
 
-    if (result.quality) {
-      lines.push(this.bold("  quality"));
-      lines.push(`    Param description coverage: ${Math.round(result.quality.paramDescriptionCoverage * 100)}%`);
-      if (result.quality.deprecatedTools.length > 0) {
-        lines.push(`    Deprecated: ${result.quality.deprecatedTools.join(", ")}`);
-      }
-      if (result.quality.duplicateToolGroups.length > 0) {
-        for (const group of result.quality.duplicateToolGroups) {
-          lines.push(`    Duplicates: ${group.join(", ")}`);
-        }
-      }
-      for (const f of result.quality.findings) {
-        const label = f.level === "critical" ? this.red("CRIT") : this.yellow("WARN");
-        lines.push(`    ${label} ${f.message}`);
-      }
-      lines.push("");
-    }
+  private formatEfficiency(result: SuiteResult): string[] {
+    if (!result.efficiency) return [];
 
-    if (result.security) {
-      lines.push(this.bold("  security"));
-      if (result.security.findings.length === 0) {
-        lines.push(`    ${this.green("No issues found")}`);
-      }
-      for (const f of result.security.findings) {
-        const label = f.level === "critical" ? this.red("CRIT") : this.yellow("WARN");
-        lines.push(`    ${label} ${f.message}`);
-      }
-      lines.push("");
+    const lines: string[] = [];
+    lines.push(this.bold("  efficiency"));
+    lines.push(
+      `    ${result.efficiency.toolCount} tools, ~${result.efficiency.schemaTokenEstimate} schema tokens`,
+    );
+    for (const f of result.efficiency.findings) {
+      const label = f.level === "critical" ? this.red("CRIT") : this.yellow("WARN");
+      lines.push(`    ${label} ${f.message}`);
     }
-
-    lines.push(this.formatSummary(result));
-    lines.push(this.formatScore(result));
     lines.push("");
 
-    return lines.join("\n");
+    return lines;
+  }
+
+  private formatQuality(result: SuiteResult): string[] {
+    if (!result.quality) return [];
+
+    const lines: string[] = [];
+    lines.push(this.bold("  quality"));
+    lines.push(`    Param description coverage: ${Math.round(result.quality.paramDescriptionCoverage * 100)}%`);
+    if (result.quality.deprecatedTools.length > 0) {
+      lines.push(`    Deprecated: ${result.quality.deprecatedTools.join(", ")}`);
+    }
+    if (result.quality.duplicateToolGroups.length > 0) {
+      for (const group of result.quality.duplicateToolGroups) {
+        lines.push(`    Duplicates: ${group.join(", ")}`);
+      }
+    }
+    for (const f of result.quality.findings) {
+      const label = f.level === "critical" ? this.red("CRIT") : this.yellow("WARN");
+      lines.push(`    ${label} ${f.message}`);
+    }
+    lines.push("");
+
+    return lines;
+  }
+
+  private formatSecurity(result: SuiteResult): string[] {
+    if (!result.security) return [];
+
+    const lines: string[] = [];
+    lines.push(this.bold("  security"));
+    if (result.security.findings.length === 0) {
+      lines.push(`    ${this.green("No issues found")}`);
+    }
+    for (const f of result.security.findings) {
+      const label = f.level === "critical" ? this.red("CRIT") : this.yellow("WARN");
+      lines.push(`    ${label} ${f.message}`);
+    }
+    lines.push("");
+
+    return lines;
   }
 
   private formatTestLine(t: TestRunResult): string {

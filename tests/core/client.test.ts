@@ -63,6 +63,8 @@ describe("createMCPClient", () => {
     });
 
     expect(wrapper.getServerCapabilities()).toBeDefined();
+    expect(wrapper.listTools).toBeDefined();
+    expect(wrapper.callTool).toBeDefined();
   });
 
   it("delegates listTools to underlying client", async () => {
@@ -88,13 +90,18 @@ describe("createMCPClient", () => {
   });
 
   it("close disconnects the client", async () => {
+    const { __mockClient: mockClient } = await import(
+      "@modelcontextprotocol/sdk/client/index.js"
+    ) as { __mockClient: { close: ReturnType<typeof vi.fn> } };
+
     const wrapper = await createMCPClient({
       command: "node",
       args: ["server.js"],
       transport: "stdio",
     });
 
+    expect(wrapper.close).toBeDefined();
     await wrapper.close();
-    // Should not throw
+    expect(mockClient.close).toHaveBeenCalled();
   });
 });

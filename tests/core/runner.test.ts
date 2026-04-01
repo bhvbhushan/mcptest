@@ -134,7 +134,7 @@ describe("runTests", () => {
         schemaTokenEstimate: 1000,
         findings: [],
       };
-      const result = await runTests(tests, ctx, undefined, "srv", efficiency);
+      const result = await runTests(tests, ctx, undefined, "srv", { efficiency });
       // compliance: (2/2) * 40 = 40, efficiency: 15 - 0 = 15, total: 55
       expect(result.score).toBe(55);
       expect(result.efficiency).toBe(efficiency);
@@ -155,7 +155,7 @@ describe("runTests", () => {
           },
         ],
       };
-      const result = await runTests(tests, ctx, undefined, "srv", efficiency);
+      const result = await runTests(tests, ctx, undefined, "srv", { efficiency });
       // compliance: (1/1) * 40 = 40, efficiency: 15 - 3 = 12, total: 52
       expect(result.score).toBe(52);
     });
@@ -170,7 +170,7 @@ describe("runTests", () => {
           { level: "critical", category: "schema-size", message: "", value: 50000, threshold: 30000 },
         ],
       };
-      const result = await runTests(tests, ctx, undefined, "srv", efficiency);
+      const result = await runTests(tests, ctx, undefined, "srv", { efficiency });
       // compliance: 40, efficiency: max(0, 15 - 16) = 0, total: 40
       expect(result.score).toBe(40);
     });
@@ -186,7 +186,7 @@ describe("runTests", () => {
           { level: "warning", category: "tool-count", message: "", value: 100, threshold: 20 },
         ],
       };
-      const result = await runTests(tests, ctx, undefined, "srv", efficiency);
+      const result = await runTests(tests, ctx, undefined, "srv", { efficiency });
       // compliance: 40, efficiency: max(0, 15 - 16 - 3) = max(0, -4) = 0, total: 40
       expect(result.score).toBe(40);
     });
@@ -204,7 +204,7 @@ describe("runTests", () => {
       };
       const security: SecurityResult = { findings: [] };
 
-      const result = await runTests(tests, ctx, undefined, "test", efficiency, quality, security);
+      const result = await runTests(tests, ctx, undefined, "test", { efficiency, quality, security });
       expect(result.score).toBe(100);
     });
 
@@ -224,7 +224,7 @@ describe("runTests", () => {
       };
       const security: SecurityResult = { findings: [] };
 
-      const result = await runTests(tests, ctx, undefined, "test", efficiency, quality, security);
+      const result = await runTests(tests, ctx, undefined, "test", { efficiency, quality, security });
       // compliance = 40, quality = 25 - 2 - 5 = 18, efficiency = 15, security = 20
       expect(result.score).toBe(93);
     });
@@ -246,7 +246,7 @@ describe("runTests", () => {
         ],
       };
 
-      const result = await runTests(tests, ctx, undefined, "test", efficiency, quality, security);
+      const result = await runTests(tests, ctx, undefined, "test", { efficiency, quality, security });
       // compliance = 40, quality = 25, efficiency = 15, security = 20 - 10 = 10
       expect(result.score).toBe(90);
     });
@@ -268,7 +268,7 @@ describe("runTests", () => {
       };
       const security: SecurityResult = { findings: [] };
 
-      const result = await runTests(tests, ctx, undefined, "test", efficiency, quality, security);
+      const result = await runTests(tests, ctx, undefined, "test", { efficiency, quality, security });
       // compliance = 40, quality = max(0, 25 - 100) = 0, efficiency = 15, security = 20
       expect(result.score).toBe(75);
     });

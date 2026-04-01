@@ -4,7 +4,7 @@ import { validateCommand, MCPTestError } from "./validate.js";
 const program = new Command()
   .name("mcp-quality-gate")
   .description("Quality gate for MCP servers — compliance, security, and efficiency testing")
-  .version("0.1.0");
+  .version("0.1.1");
 
 program
   .command("validate <server>")

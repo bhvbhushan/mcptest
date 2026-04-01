@@ -69,6 +69,49 @@ export interface ValidateOptions {
   skipSecurity?: boolean;
 }
 
+interface AnalyzerOptions {
+  skipEfficiency?: boolean;
+  skipQuality?: boolean;
+  skipSecurity?: boolean;
+  maxTools?: string;
+  maxSchemaTokens?: string;
+}
+
+function runAnalyzers(allTools: ToolDefinition[], opts: AnalyzerOptions) {
+  let efficiency;
+  if (!opts.skipEfficiency) {
+    const efficiencyConfig: EfficiencyConfig = {};
+    if (opts.maxTools)
+      efficiencyConfig.maxToolsCritical = parseInt(opts.maxTools, 10);
+    if (opts.maxSchemaTokens)
+      efficiencyConfig.maxSchemaTokensCritical = parseInt(opts.maxSchemaTokens, 10);
+    efficiency = analyzeEfficiency(allTools, efficiencyConfig);
+  }
+
+  let quality: QualityResult | undefined;
+  if (!opts.skipQuality) {
+    quality = analyzeQuality(allTools);
+  }
+
+  let security: SecurityResult | undefined;
+  if (!opts.skipSecurity) {
+    security = analyzeSecurity(allTools);
+  }
+
+  return { efficiency, quality, security };
+}
+
+function writeOutput(output: string, outputPath?: string): void {
+  if (outputPath) {
+    const resolved = path.resolve(outputPath);
+    fs.mkdirSync(path.dirname(resolved), { recursive: true });
+    fs.writeFileSync(resolved, output, "utf-8");
+    process.stderr.write(`Report written to ${resolved}\n`);
+  } else {
+    process.stdout.write(output + "\n");
+  }
+}
+
 export async function validateCommand(
   server: string,
   options: ValidateOptions,
@@ -106,7 +149,6 @@ export async function validateCommand(
         ? serverConfig.url!
         : [serverConfig.command, ...(serverConfig.args ?? [])].join(" ");
 
-    // Fetch tools once for all analyzers
     let allTools: ToolDefinition[];
     try {
       allTools = await listAllTools(client);
@@ -114,25 +156,7 @@ export async function validateCommand(
       allTools = [];
     }
 
-    let efficiency;
-    if (!options.skipEfficiency) {
-      const efficiencyConfig: EfficiencyConfig = {};
-      if (options.maxTools)
-        efficiencyConfig.maxToolsCritical = parseInt(options.maxTools, 10);
-      if (options.maxSchemaTokens)
-        efficiencyConfig.maxSchemaTokensCritical = parseInt(options.maxSchemaTokens, 10);
-      efficiency = analyzeEfficiency(allTools, efficiencyConfig);
-    }
-
-    let quality: QualityResult | undefined;
-    if (!options.skipQuality) {
-      quality = analyzeQuality(allTools);
-    }
-
-    let security: SecurityResult | undefined;
-    if (!options.skipSecurity) {
-      security = analyzeSecurity(allTools);
-    }
+    const analyzers = runAnalyzers(allTools, options);
 
     const result = await runTests(
       complianceTests,
@@ -142,21 +166,10 @@ export async function validateCommand(
         only: onlyList && onlyList.length > 0 ? onlyList : undefined,
       },
       serverLabel,
-      efficiency,
-      quality,
-      security,
+      analyzers,
     );
 
-    const output = reporter.format(result);
-
-    if (options.output) {
-      const outputPath = path.resolve(options.output);
-      fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-      fs.writeFileSync(outputPath, output, "utf-8");
-      console.log(`Report written to ${outputPath}`);
-    } else {
-      console.log(output);
-    }
+    writeOutput(reporter.format(result), options.output);
 
     if (options.threshold) {
       const threshold = parseInt(options.threshold, 10);

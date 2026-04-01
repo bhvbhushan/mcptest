@@ -23,25 +23,27 @@ export interface ServerConfig {
 export async function createMCPClient(
   config: ServerConfig,
 ): Promise<MCPClientWrapper & { close(): Promise<void> }> {
-  const client = new Client({ name: "mcp-quality-gate", version: "0.1.0" });
-
-  if (config.transport === "http" && !config.url) {
-    throw new Error("URL is required for HTTP transport");
-  }
-
-  const transport =
-    config.transport === "http"
-      ? new StreamableHTTPClientTransport(new URL(config.url!))
-      : new StdioClientTransport({
-          command: config.command,
-          args: config.args,
-          env: config.env
-            ? { ...process.env as Record<string, string>, ...config.env }
-            : undefined,
-        });
-
+  const client = new Client({ name: "mcp-quality-gate", version: "0.1.1" });
+  const transport = createTransport(config);
   await client.connect(transport);
+  return createClientWrapper(client);
+}
 
+function createTransport(config: ServerConfig) {
+  if (config.transport === "http") {
+    if (!config.url) throw new Error("URL is required for HTTP transport");
+    return new StreamableHTTPClientTransport(new URL(config.url));
+  }
+  return new StdioClientTransport({
+    command: config.command,
+    args: config.args,
+    env: config.env
+      ? { ...process.env as Record<string, string>, ...config.env }
+      : undefined,
+  });
+}
+
+function createClientWrapper(client: Client): MCPClientWrapper & { close(): Promise<void> } {
   return {
     getServerCapabilities() {
       return client.getServerCapabilities() as ReturnType<MCPClientWrapper["getServerCapabilities"]>;
@@ -65,7 +67,14 @@ export async function createMCPClient(
       return (await client.listPrompts(params)) as ListPromptsResult;
     },
     async getPrompt(params) {
-      return (await client.getPrompt(params)) as unknown as GetPromptResult;
+      const result = await client.getPrompt(params);
+      return {
+        messages: result.messages.map((m) => ({
+          role: m.role as string,
+          content: (Array.isArray(m.content) ? m.content : [m.content]) as GetPromptResult["messages"][0]["content"],
+        })),
+        description: result.description,
+      };
     },
     async ping() {
       await client.ping();

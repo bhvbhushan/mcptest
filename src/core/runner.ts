@@ -10,57 +10,63 @@ import type { EfficiencyResult } from "../efficiency/types.js";
 import type { QualityResult } from "../quality/types.js";
 import type { SecurityResult } from "../security/types.js";
 
+export interface AnalyzerResults {
+  efficiency?: EfficiencyResult;
+  quality?: QualityResult;
+  security?: SecurityResult;
+}
+
 export async function runTests(
   tests: MCPTest[],
   ctx: TestContext,
   options?: RunOptions,
   serverLabel?: string,
-  efficiency?: EfficiencyResult,
-  quality?: QualityResult,
-  security?: SecurityResult,
+  analyzers?: AnalyzerResults,
 ): Promise<SuiteResult> {
   const start = performance.now();
   const results: TestRunResult[] = [];
 
   for (const test of tests) {
-    const shouldSkip =
-      (options?.skip?.includes(test.id)) ||
-      (options?.only && !options.only.includes(test.id));
-
-    if (shouldSkip) {
-      results.push({
-        test: pickTestMeta(test),
-        result: { status: "skip", message: "skipped by filter", duration_ms: 0 },
-      });
-      continue;
-    }
-
-    const testStart = performance.now();
-    let result: TestResult;
-
-    try {
-      result = await Promise.race([
-        test.run(ctx),
-        new Promise<never>((_, reject) =>
-          setTimeout(
-            () => reject(new Error(`Test timed out after ${ctx.timeout}ms`)),
-            ctx.timeout,
-          ),
-        ),
-      ]);
-      result.duration_ms = performance.now() - testStart;
-    } catch (error) {
-      result = {
-        status: "error",
-        message: error instanceof Error ? error.message : String(error),
-        duration_ms: performance.now() - testStart,
-      };
-    }
-
+    const result = await executeTest(test, ctx, options);
     results.push({ test: pickTestMeta(test), result });
   }
 
-  return buildSuiteResult(results, performance.now() - start, serverLabel, efficiency, quality, security);
+  return buildSuiteResult(results, performance.now() - start, serverLabel, analyzers);
+}
+
+async function executeTest(
+  test: MCPTest,
+  ctx: TestContext,
+  options?: RunOptions,
+): Promise<TestResult> {
+  const shouldSkip =
+    (options?.skip?.includes(test.id)) ||
+    (options?.only && !options.only.includes(test.id));
+
+  if (shouldSkip) {
+    return { status: "skip", message: "skipped by filter", duration_ms: 0 };
+  }
+
+  const testStart = performance.now();
+  try {
+    const result = await Promise.race([
+      test.run(ctx),
+      new Promise<never>((_, reject) =>
+        setTimeout(
+          () => reject(new Error(`Test timed out after ${ctx.timeout}ms`)),
+          ctx.timeout,
+        ),
+      ),
+    ]);
+    result.duration_ms = performance.now() - testStart;
+    return result;
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : String(error),
+      duration_ms: performance.now() - testStart,
+    };
+  }
 }
 
 function pickTestMeta(
@@ -78,10 +84,9 @@ function buildSuiteResult(
   results: TestRunResult[],
   duration_ms: number,
   serverLabel?: string,
-  efficiency?: EfficiencyResult,
-  quality?: QualityResult,
-  security?: SecurityResult,
+  analyzers?: AnalyzerResults,
 ): SuiteResult {
+  const { efficiency, quality, security } = analyzers ?? {};
   const passed = results.filter((r) => r.result.status === "pass").length;
   const failed = results.filter((r) => r.result.status === "fail").length;
   const skipped = results.filter((r) => r.result.status === "skip").length;
@@ -98,51 +103,36 @@ function buildSuiteResult(
     efficiency,
     quality,
     security,
-    score: calculateScore(passed, ran, efficiency, quality, security),
+    score: calculateScore(passed, ran, analyzers),
   };
 }
 
 function calculateScore(
   passed: number,
   ran: number,
-  efficiency?: EfficiencyResult,
-  quality?: QualityResult,
-  security?: SecurityResult,
+  analyzers?: AnalyzerResults,
 ): number {
   if (ran === 0) return 0;
+  const { efficiency, quality, security } = analyzers ?? {};
 
-  // Compliance: max 40 points
   const complianceScore = (passed / ran) * 40;
-
-  // Quality: max 25 points (0 if not analyzed)
-  let qualityScore = 0;
-  if (quality) {
-    qualityScore = 25;
-    for (const f of quality.findings) {
-      qualityScore -= f.level === "critical" ? 5 : 2;
-    }
-    qualityScore = Math.max(0, qualityScore);
-  }
-
-  // Efficiency: max 15 points (0 if not analyzed)
-  let efficiencyScore = 0;
-  if (efficiency) {
-    efficiencyScore = 15;
-    for (const f of efficiency.findings) {
-      efficiencyScore -= f.level === "critical" ? 8 : 3;
-    }
-    efficiencyScore = Math.max(0, efficiencyScore);
-  }
-
-  // Security: max 20 points (0 if not analyzed)
-  let securityScore = 0;
-  if (security) {
-    securityScore = 20;
-    for (const f of security.findings) {
-      securityScore -= f.level === "critical" ? 10 : 5;
-    }
-    securityScore = Math.max(0, securityScore);
-  }
+  const qualityScore = dimensionScore(25, quality?.findings, 5, 2);
+  const efficiencyScore = dimensionScore(15, efficiency?.findings, 8, 3);
+  const securityScore = dimensionScore(20, security?.findings, 10, 5);
 
   return Math.round(complianceScore + qualityScore + efficiencyScore + securityScore);
+}
+
+function dimensionScore(
+  max: number,
+  findings: { level: string }[] | undefined,
+  criticalPenalty: number,
+  warningPenalty: number,
+): number {
+  if (!findings) return 0;
+  let score = max;
+  for (const f of findings) {
+    score -= f.level === "critical" ? criticalPenalty : warningPenalty;
+  }
+  return Math.max(0, score);
 }
