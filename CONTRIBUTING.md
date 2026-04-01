@@ -122,9 +122,9 @@ npm run lint && npm run build && npm test   # prepublishOnly runs this automatic
 npm publish --provenance --access public
 ```
 
-### Required Secrets
+### Authentication
 
-The publish workflow requires `NPM_TOKEN` configured as a GitHub repository secret. Generate one at [npmjs.com/settings/tokens](https://www.npmjs.com/settings/tokens) with "Automation" type.
+Publishing uses [npm Trusted Publishers](https://docs.npmjs.com/generating-provenance-statements#publishing-with-trusted-publishing) (OIDC). No `NPM_TOKEN` secret needed — the GitHub Actions workflow authenticates directly with npm via OpenID Connect.
 
 ## Questions?
 
