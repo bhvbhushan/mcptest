@@ -43,18 +43,45 @@ mcptest validate "./my-server" --skip lifecycle-init-03
 | `--skip` | Comma-separated test IDs to skip | — |
 | `--only` | Comma-separated test IDs to run | — |
 | `-e, --env` | Environment variables as `KEY=VAL,KEY2=VAL2` | — |
+| `--max-tools` | Critical threshold for tool count | `50` |
+| `--max-schema-tokens` | Critical threshold for schema tokens | `30000` |
+| `--skip-efficiency` | Skip efficiency analysis | — |
 
 ## What's Tested (Phase 1)
 
-### Compliance Tests — Lifecycle
+### Compliance Tests
 
-| ID | Test | Severity |
-|----|------|----------|
-| `lifecycle-init-01` | Server reports name and version | Critical |
-| `lifecycle-init-02` | Server reports capabilities | Critical |
-| `lifecycle-init-03` | Server responds to ping | High |
+| Category | ID | Test | Severity |
+|----------|----|------|----------|
+| Lifecycle | `lifecycle-init-01` | Server reports name and version | Critical |
+| Lifecycle | `lifecycle-init-02` | Server reports capabilities | Critical |
+| Lifecycle | `lifecycle-init-03` | Server responds to ping | High |
+| Tools | `tools-list-01` | Server lists tools without error | Critical |
+| Tools | `tools-list-02` | Tool definitions have required fields | Critical |
+| Tools | `tools-list-03` | Tool names follow naming convention | Medium |
+| Tools | `tools-list-04` | Tool inputSchema has type "object" | High |
+| Tools | `tools-call-01` | Can call a listed tool | Critical |
+| Tools | `tools-call-02` | Calling nonexistent tool returns error | High |
+| Tools | `tools-call-03` | Tool descriptions are present | Medium |
 
-More compliance tests (tools, resources, prompts, transport, protocol) and the tool efficiency module are coming in Phase 1 Week 2.
+### Efficiency Analysis
+
+Analyzes tool proliferation and schema bloat — key causes of poor LLM performance with MCP servers.
+
+| Metric | Warning | Critical |
+|--------|---------|----------|
+| Tool count | > 20 | > 50 |
+| Schema tokens (est.) | > 10,000 | > 30,000 |
+
+Token estimation uses `chars/4` heuristic (~15% accuracy vs tiktoken for JSON schemas).
+
+### Quality Score
+
+Composite 0-100 score (max 80 in Phase 1, security adds 20 in Phase 2):
+- **Compliance** (60%): `(passed / total_run) × 60`
+- **Efficiency** (20%): `20 - (warnings × 5) - (criticals × 10)`, min 0
+
+More compliance tests (resources, prompts, transport, protocol) are coming in Phase 1 Week 3.
 
 ## Programmatic API
 

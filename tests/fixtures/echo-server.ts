@@ -16,6 +16,15 @@ server.tool(
   }),
 );
 
+server.tool(
+  "add",
+  "Adds two numbers",
+  { a: z.number(), b: z.number() },
+  async ({ a, b }) => ({
+    content: [{ type: "text", text: String(a + b) }],
+  }),
+);
+
 server.resource(
   "greeting",
   "test://greeting",
