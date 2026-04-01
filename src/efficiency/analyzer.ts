@@ -1,4 +1,4 @@
-import type { MCPClientWrapper } from "../core/types.js";
+import type { ToolDefinition } from "../core/types.js";
 import type {
   EfficiencyResult,
   EfficiencyFinding,
@@ -6,28 +6,11 @@ import type {
 } from "./types.js";
 import { DEFAULT_EFFICIENCY_CONFIG } from "./types.js";
 
-export async function analyzeEfficiency(
-  client: MCPClientWrapper,
+export function analyzeEfficiency(
+  tools: ToolDefinition[],
   config?: EfficiencyConfig,
-): Promise<EfficiencyResult> {
+): EfficiencyResult {
   const cfg = { ...DEFAULT_EFFICIENCY_CONFIG, ...config };
-
-  let tools: { name: string; inputSchema: Record<string, unknown> }[] = [];
-  try {
-    const capabilities = client.getServerCapabilities();
-    if (!capabilities?.tools) {
-      return { toolCount: 0, schemaTokenEstimate: 0, findings: [] };
-    }
-
-    let cursor: string | undefined;
-    do {
-      const page = await client.listTools(cursor ? { cursor } : undefined);
-      tools.push(...page.tools);
-      cursor = page.nextCursor;
-    } while (cursor);
-  } catch {
-    return { toolCount: 0, schemaTokenEstimate: 0, findings: [] };
-  }
 
   const toolCount = tools.length;
   const schemaTokenEstimate = Math.ceil(JSON.stringify(tools).length / 4);

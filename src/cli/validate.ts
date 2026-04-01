@@ -16,6 +16,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { analyzeEfficiency } from "../efficiency/analyzer.js";
 import type { EfficiencyConfig } from "../efficiency/types.js";
+import { listAllTools } from "../core/client.js";
 
 export function parseServerArg(
   server: string,
@@ -105,7 +106,8 @@ export async function validateCommand(
         efficiencyConfig.maxToolsCritical = parseInt(options.maxTools, 10);
       if (options.maxSchemaTokens)
         efficiencyConfig.maxSchemaTokensCritical = parseInt(options.maxSchemaTokens, 10);
-      efficiency = await analyzeEfficiency(client, efficiencyConfig);
+      const tools = await listAllTools(client);
+      efficiency = analyzeEfficiency(tools, efficiencyConfig);
     }
 
     const result = await runTests(
