@@ -33,8 +33,50 @@ export class ConsoleReporter implements Reporter {
       lines.push("");
     }
 
+    if (result.efficiency) {
+      lines.push(this.bold("  efficiency"));
+      lines.push(
+        `    ${result.efficiency.toolCount} tools, ~${result.efficiency.schemaTokenEstimate} schema tokens`,
+      );
+      for (const f of result.efficiency.findings) {
+        const label = f.level === "critical" ? this.red("CRIT") : this.yellow("WARN");
+        lines.push(`    ${label} ${f.message}`);
+      }
+      lines.push("");
+    }
+
+    if (result.quality) {
+      lines.push(this.bold("  quality"));
+      lines.push(`    Param description coverage: ${Math.round(result.quality.paramDescriptionCoverage * 100)}%`);
+      if (result.quality.deprecatedTools.length > 0) {
+        lines.push(`    Deprecated: ${result.quality.deprecatedTools.join(", ")}`);
+      }
+      if (result.quality.duplicateToolGroups.length > 0) {
+        for (const group of result.quality.duplicateToolGroups) {
+          lines.push(`    Duplicates: ${group.join(", ")}`);
+        }
+      }
+      for (const f of result.quality.findings) {
+        const label = f.level === "critical" ? this.red("CRIT") : this.yellow("WARN");
+        lines.push(`    ${label} ${f.message}`);
+      }
+      lines.push("");
+    }
+
+    if (result.security) {
+      lines.push(this.bold("  security"));
+      if (result.security.findings.length === 0) {
+        lines.push(`    ${this.green("No issues found")}`);
+      }
+      for (const f of result.security.findings) {
+        const label = f.level === "critical" ? this.red("CRIT") : this.yellow("WARN");
+        lines.push(`    ${label} ${f.message}`);
+      }
+      lines.push("");
+    }
+
     lines.push(this.formatSummary(result));
-    lines.push(this.formatScore(result.score));
+    lines.push(this.formatScore(result));
     lines.push("");
 
     return lines.join("\n");
@@ -64,11 +106,32 @@ export class ConsoleReporter implements Reporter {
     return `Results: ${parts.join(", ")} (${result.duration_ms}ms)`;
   }
 
-  private formatScore(score: number): string {
+  private formatScore(result: SuiteResult): string {
+    const score = result.score;
     const label = `Score: ${score}/100`;
-    if (score >= 80) return this.green(label);
-    if (score >= 50) return this.yellow(label);
-    return this.red(label);
+    const colored = score >= 80 ? this.green(label) : score >= 50 ? this.yellow(label) : this.red(label);
+
+    const parts: string[] = [];
+    const { passed, skipped } = result.summary;
+    const ran = result.summary.total - skipped;
+    if (ran > 0) parts.push(`compliance ${Math.round((passed / ran) * 40)}/40`);
+    if (result.quality) {
+      let qs = 25;
+      for (const f of result.quality.findings) qs -= f.level === "critical" ? 5 : 2;
+      parts.push(`quality ${Math.max(0, qs)}/25`);
+    }
+    if (result.efficiency) {
+      let es = 15;
+      for (const f of result.efficiency.findings) es -= f.level === "critical" ? 8 : 3;
+      parts.push(`efficiency ${Math.max(0, es)}/15`);
+    }
+    if (result.security) {
+      let ss = 20;
+      for (const f of result.security.findings) ss -= f.level === "critical" ? 10 : 5;
+      parts.push(`security ${Math.max(0, ss)}/20`);
+    }
+
+    return parts.length > 0 ? `${colored}\n  ${this.dim(parts.join(" | "))}` : colored;
   }
 
   private colorStatus(symbol: string, status: string): string {

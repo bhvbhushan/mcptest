@@ -17,6 +17,11 @@ program
   .option("--skip <tests>", "comma-separated test IDs to skip")
   .option("--only <tests>", "comma-separated test IDs to run")
   .option("-e, --env <vars>", "environment variables as KEY=VAL,KEY2=VAL2")
+  .option("--max-tools <count>", "max tool count before critical finding")
+  .option("--max-schema-tokens <count>", "max schema tokens before critical finding")
+  .option("--skip-efficiency", "skip efficiency analysis")
+  .option("--skip-quality", "skip schema quality analysis")
+  .option("--skip-security", "skip security analysis")
   .action(validateCommand);
 
 program.parseAsync().catch((error) => {

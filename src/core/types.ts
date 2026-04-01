@@ -1,3 +1,7 @@
+import type { QualityResult } from "../quality/types.js";
+import type { SecurityResult } from "../security/types.js";
+import type { EfficiencyResult } from "../efficiency/types.js";
+
 export interface MCPTest {
   id: string;
   name: string;
@@ -131,6 +135,9 @@ export interface SuiteResult {
     skipped: number;
     errors: number;
   };
+  efficiency?: EfficiencyResult;
+  quality?: QualityResult;
+  security?: SecurityResult;
   score: number;
 }
 

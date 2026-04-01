@@ -1,4 +1,5 @@
 import type { ServerConfig } from "../core/client.js";
+import type { ToolDefinition } from "../core/types.js";
 import { createMCPClient } from "../core/client.js";
 
 export class MCPTestError extends Error {
@@ -14,6 +15,13 @@ import { JsonReporter } from "../reporters/json.js";
 import type { Reporter } from "../reporters/types.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { analyzeEfficiency } from "../efficiency/analyzer.js";
+import type { EfficiencyConfig } from "../efficiency/types.js";
+import { listAllTools } from "../core/client.js";
+import { analyzeQuality } from "../quality/analyzer.js";
+import { analyzeSecurity } from "../security/analyzer.js";
+import type { QualityResult } from "../quality/types.js";
+import type { SecurityResult } from "../security/types.js";
 
 export function parseServerArg(
   server: string,
@@ -54,6 +62,11 @@ export interface ValidateOptions {
   skip?: string;
   only?: string;
   env?: string;
+  maxTools?: string;
+  maxSchemaTokens?: string;
+  skipEfficiency?: boolean;
+  skipQuality?: boolean;
+  skipSecurity?: boolean;
 }
 
 export async function validateCommand(
@@ -93,6 +106,34 @@ export async function validateCommand(
         ? serverConfig.url!
         : [serverConfig.command, ...(serverConfig.args ?? [])].join(" ");
 
+    // Fetch tools once for all analyzers
+    let allTools: ToolDefinition[];
+    try {
+      allTools = await listAllTools(client);
+    } catch {
+      allTools = [];
+    }
+
+    let efficiency;
+    if (!options.skipEfficiency) {
+      const efficiencyConfig: EfficiencyConfig = {};
+      if (options.maxTools)
+        efficiencyConfig.maxToolsCritical = parseInt(options.maxTools, 10);
+      if (options.maxSchemaTokens)
+        efficiencyConfig.maxSchemaTokensCritical = parseInt(options.maxSchemaTokens, 10);
+      efficiency = analyzeEfficiency(allTools, efficiencyConfig);
+    }
+
+    let quality: QualityResult | undefined;
+    if (!options.skipQuality) {
+      quality = analyzeQuality(allTools);
+    }
+
+    let security: SecurityResult | undefined;
+    if (!options.skipSecurity) {
+      security = analyzeSecurity(allTools);
+    }
+
     const result = await runTests(
       complianceTests,
       { client, timeout },
@@ -101,6 +142,9 @@ export async function validateCommand(
         only: onlyList && onlyList.length > 0 ? onlyList : undefined,
       },
       serverLabel,
+      efficiency,
+      quality,
+      security,
     );
 
     const output = reporter.format(result);

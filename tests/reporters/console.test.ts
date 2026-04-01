@@ -87,4 +87,33 @@ describe("ConsoleReporter", () => {
     const output = reporter.format(result);
     expect(output).toContain("150ms");
   });
+
+  it("shows efficiency section when present", () => {
+    const result = mockSuiteResult({
+      efficiency: {
+        toolCount: 25,
+        schemaTokenEstimate: 5000,
+        findings: [
+          {
+            level: "warning",
+            category: "tool-count",
+            message: "Server exposes 25 tools (warning threshold: 20)",
+            value: 25,
+            threshold: 20,
+          },
+        ],
+      },
+    });
+    const output = reporter.format(result);
+    expect(output).toContain("efficiency");
+    expect(output).toContain("25 tools");
+    expect(output).toContain("5000");
+    expect(output).toContain("WARN");
+  });
+
+  it("does not show efficiency section when absent", () => {
+    const result = mockSuiteResult({ efficiency: undefined });
+    const output = reporter.format(result);
+    expect(output).not.toContain("efficiency");
+  });
 });

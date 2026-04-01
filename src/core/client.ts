@@ -3,6 +3,7 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type {
   MCPClientWrapper,
+  ToolDefinition,
   ListToolsResult,
   CallToolResult,
   ListResourcesResult,
@@ -73,4 +74,20 @@ export async function createMCPClient(
       await client.close();
     },
   };
+}
+
+export async function listAllTools(
+  client: MCPClientWrapper,
+): Promise<ToolDefinition[]> {
+  const caps = client.getServerCapabilities();
+  if (!caps?.tools) return [];
+
+  const tools: ToolDefinition[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = await client.listTools(cursor ? { cursor } : undefined);
+    tools.push(...page.tools);
+    cursor = page.nextCursor;
+  } while (cursor);
+  return tools;
 }
