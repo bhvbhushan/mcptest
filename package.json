@@ -1,12 +1,12 @@
 {
-  "name": "mcptest",
+  "name": "mcp-quality-gate",
   "version": "0.1.0",
   "description": "Quality gate for MCP servers — compliance, security, and efficiency testing",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "mcptest": "./dist/cli/index.js"
+    "mcp-quality-gate": "./dist/cli/index.js"
   },
   "exports": {
     ".": {
@@ -34,12 +34,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/bhvbhushan/mcptest.git"
+    "url": "git+https://github.com/bhvbhushan/mcp-quality-gate.git"
   },
   "bugs": {
-    "url": "https://github.com/bhvbhushan/mcptest/issues"
+    "url": "https://github.com/bhvbhushan/mcp-quality-gate/issues"
   },
-  "homepage": "https://github.com/bhvbhushan/mcptest#readme",
+  "homepage": "https://github.com/bhvbhushan/mcp-quality-gate#readme",
   "keywords": [
     "mcp",
     "mcp-server",

@@ -19,7 +19,7 @@ export class ConsoleReporter implements Reporter {
     const lines: string[] = [];
 
     lines.push("");
-    lines.push(this.bold(`mcptest v0.1.0`));
+    lines.push(this.bold(`mcp-quality-gate v0.1.0`));
     lines.push(`Server: ${result.server}`);
     lines.push("");
 

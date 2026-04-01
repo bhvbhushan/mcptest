@@ -23,7 +23,7 @@ export interface ServerConfig {
 export async function createMCPClient(
   config: ServerConfig,
 ): Promise<MCPClientWrapper & { close(): Promise<void> }> {
-  const client = new Client({ name: "mcptest", version: "0.1.0" });
+  const client = new Client({ name: "mcp-quality-gate", version: "0.1.0" });
 
   if (config.transport === "http" && !config.url) {
     throw new Error("URL is required for HTTP transport");
