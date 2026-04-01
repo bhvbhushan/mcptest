@@ -1,24 +1,24 @@
-# mcptest
+# mcp-quality-gate
 
-[![npm version](https://img.shields.io/npm/v/mcptest)](https://www.npmjs.com/package/mcptest)
-[![license](https://img.shields.io/npm/l/mcptest)](https://github.com/bhvbhushan/mcptest/blob/main/LICENSE)
+[![npm version](https://img.shields.io/npm/v/mcp-quality-gate)](https://www.npmjs.com/package/mcp-quality-gate)
+[![license](https://img.shields.io/npm/l/mcp-quality-gate)](https://github.com/bhvbhushan/mcp-quality-gate/blob/main/LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
-[![Node.js](https://img.shields.io/node/v/mcptest)](https://nodejs.org/)
-[![CI](https://github.com/bhvbhushan/mcptest/actions/workflows/ci.yml/badge.svg)](https://github.com/bhvbhushan/mcptest/actions/workflows/ci.yml)
+[![Node.js](https://img.shields.io/node/v/mcp-quality-gate)](https://nodejs.org/)
+[![CI](https://github.com/bhvbhushan/mcp-quality-gate/actions/workflows/ci.yml/badge.svg)](https://github.com/bhvbhushan/mcp-quality-gate/actions/workflows/ci.yml)
 
 **Quality gate for MCP servers.** Like `npm audit` for packages, but for [Model Context Protocol](https://modelcontextprotocol.io/) servers.
 
-When an LLM connects to your MCP server, it trusts whatever you expose. Bad tool schemas mean bad tool calls. Missing descriptions mean the model guesses. 50+ tools flood the context window. Leaked environment variables expose secrets. mcptest catches all of this in one command.
+When an LLM connects to your MCP server, it trusts whatever you expose. Bad tool schemas mean bad tool calls. Missing descriptions mean the model guesses. 50+ tools flood the context window. Leaked environment variables expose secrets. mcp-quality-gate catches all of this in one command.
 
 ```bash
-npx mcptest validate "npx -y @modelcontextprotocol/server-filesystem /tmp"
+npx mcp-quality-gate validate "npx -y @modelcontextprotocol/server-filesystem /tmp"
 ```
 
 One command. Four dimensions. 0-100 score.
 
 ## What It Catches
 
-mcptest scores every MCP server across four dimensions:
+mcp-quality-gate scores every MCP server across four dimensions:
 
 | Dimension | Weight | What It Checks | Why It Matters |
 |-----------|:------:|----------------|----------------|
@@ -30,7 +30,7 @@ mcptest scores every MCP server across four dimensions:
 ## Install
 
 ```bash
-npm install -g mcptest
+npm install -g mcp-quality-gate
 ```
 
 Requires Node.js >= 22.
@@ -39,27 +39,27 @@ Requires Node.js >= 22.
 
 ```bash
 # Test any stdio MCP server
-mcptest validate "npx -y @modelcontextprotocol/server-filesystem /tmp"
+mcp-quality-gate validate "npx -y @modelcontextprotocol/server-filesystem /tmp"
 
 # Test with environment variables
-mcptest validate "npx -y @supabase/mcp-server-supabase@latest --read-only --project-ref REF" \
+mcp-quality-gate validate "npx -y @supabase/mcp-server-supabase@latest --read-only --project-ref REF" \
   --env "SUPABASE_ACCESS_TOKEN=your-token"
 
 # JSON output for CI/CD pipelines
-mcptest validate "./my-server" --reporter json --output report.json
+mcp-quality-gate validate "./my-server" --reporter json --output report.json
 
 # Fail CI if score is below threshold
-mcptest validate "./my-server" --threshold 80
+mcp-quality-gate validate "./my-server" --threshold 80
 
 # Test HTTP/SSE servers
-mcptest validate "http://localhost:3000/mcp" --transport http
+mcp-quality-gate validate "http://localhost:3000/mcp" --transport http
 ```
 
 ## Real-World Benchmarks
 
 Tested against official MCP reference servers (April 2026). These are real results from live server connections, not synthetic data:
 
-| Server | Score | Compliance | Quality | Efficiency | Security | What mcptest Found |
+| Server | Score | Compliance | Quality | Efficiency | Security | What mcp-quality-gate Found |
 |--------|:-----:|:----------:|:-------:|:----------:|:--------:|---|
 | **Memory** | **98** | 40/40 | 23/25 | 15/15 | 20/20 | 50% of parameters have no descriptions — LLMs have to guess argument format |
 | **Sequential Thinking** | **98** | 40/40 | 23/25 | 15/15 | 20/20 | 500+ character description — wastes context tokens on a single tool |
@@ -72,7 +72,7 @@ Servers tested: `@modelcontextprotocol/server-memory`, `@modelcontextprotocol/se
 ### Example Output
 
 ```
-mcptest v0.1.0
+mcp-quality-gate v0.1.0
 Server: npx -y @modelcontextprotocol/server-filesystem /tmp
 
   lifecycle
@@ -121,7 +121,7 @@ Score: 81/100
 
 ## Compliance Tests (17)
 
-mcptest connects to your server, makes real protocol calls, and verifies behavior. This is not static analysis — it's a live test suite that actually calls your tools with generated arguments.
+mcp-quality-gate connects to your server, makes real protocol calls, and verifies behavior. This is not static analysis — it's a live test suite that actually calls your tools with generated arguments.
 
 | Category | Tests | What's Verified |
 |----------|:-----:|-----------------|
@@ -225,10 +225,10 @@ Add to your GitHub Actions workflow:
 
 ```yaml
 - name: Test MCP Server
-  run: npx mcptest validate "./my-server" --threshold 80 --reporter json --output mcptest-report.json
+  run: npx mcp-quality-gate validate "./my-server" --threshold 80 --reporter json --output mcp-quality-gate-report.json
 ```
 
-mcptest exits with code 1 when the score falls below `--threshold`, failing the CI step.
+mcp-quality-gate exits with code 1 when the score falls below `--threshold`, failing the CI step.
 
 ## Programmatic API
 
@@ -242,7 +242,7 @@ import {
   analyzeQuality,
   analyzeSecurity,
   ConsoleReporter,
-} from "mcptest";
+} from "mcp-quality-gate";
 
 const client = await createMCPClient({
   command: "node",
@@ -272,7 +272,7 @@ await client.close();
 ## Architecture
 
 ```
-mcptest
+mcp-quality-gate
 ├── CLI (Commander)         → parse args, orchestrate
 ├── MCP Client Wrapper      → connect via stdio or HTTP, manage lifecycle
 ├── Compliance Tests (17)   → live protocol verification
@@ -289,7 +289,7 @@ mcptest
 
 ## Releases
 
-mcptest follows [Semantic Versioning](https://semver.org/):
+mcp-quality-gate follows [Semantic Versioning](https://semver.org/):
 
 - **0.x.y** — pre-1.0, API may change between minor versions
 - **PATCH** (0.x.Y) — bug fixes, new compliance tests, doc updates
@@ -309,7 +309,7 @@ The `prepublishOnly` script runs `lint && build && test` as a safety gate. See [
 
 - [x] **v0.1** — Compliance tests (lifecycle, tools, resources, prompts), quality + security + efficiency analysis, 4-dimension scoring, CI/CD workflows
 - [ ] **v0.2** — Transport compliance tests (HTTP/SSE edge cases), response schema validation, capability refusal tests
-- [ ] **v0.3** — `mcptest init` scaffolding, GitHub Action for CI, performance benchmarking
+- [ ] **v0.3** — `mcp-quality-gate init` scaffolding, GitHub Action for CI, performance benchmarking
 - [ ] **v1.0** — Dynamic security testing, MCP server registry scanner, stable API
 
 ## Contributing

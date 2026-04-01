@@ -2,7 +2,7 @@ import { Command } from "commander";
 import { validateCommand, MCPTestError } from "./validate.js";
 
 const program = new Command()
-  .name("mcptest")
+  .name("mcp-quality-gate")
   .description("Quality gate for MCP servers — compliance, security, and efficiency testing")
   .version("0.1.0");
 

@@ -1,5 +1,5 @@
 name: Bug Report
-description: Report a bug in mcptest
+description: Report a bug in mcp-quality-gate
 title: "[Bug]: "
 labels: ["bug"]
 body:
@@ -22,7 +22,7 @@ body:
       label: Steps to Reproduce
       description: How can we reproduce this?
       placeholder: |
-        1. Run `mcptest validate "npx my-server"`
+        1. Run `mcp-quality-gate validate "npx my-server"`
         2. See error...
     validations:
       required: true
@@ -70,9 +70,9 @@ body:
       required: true
 
   - type: input
-    id: mcptest-version
+    id: mcp-quality-gate-version
     attributes:
-      label: mcptest Version
+      label: mcp-quality-gate Version
       placeholder: "e.g., 0.1.0"
     validations:
       required: true

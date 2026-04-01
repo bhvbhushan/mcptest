@@ -1,12 +1,12 @@
-# Contributing to mcptest
+# Contributing to mcp-quality-gate
 
 Contributions are welcome! Here's how to get started.
 
 ## Development Setup
 
 ```bash
-git clone https://github.com/bhvbhushan/mcptest.git
-cd mcptest
+git clone https://github.com/bhvbhushan/mcp-quality-gate.git
+cd mcp-quality-gate
 npm install
 npm run build     # tsup: src/ -> dist/
 npm test          # vitest (unit + integration)
@@ -128,4 +128,4 @@ The publish workflow requires `NPM_TOKEN` configured as a GitHub repository secr
 
 ## Questions?
 
-Use [GitHub Discussions](https://github.com/bhvbhushan/mcptest/discussions) for questions, not issues.
+Use [GitHub Discussions](https://github.com/bhvbhushan/mcp-quality-gate/discussions) for questions, not issues.

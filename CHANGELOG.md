@@ -8,7 +8,7 @@ This project follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- CLI tool `mcptest validate` for testing any MCP server via stdio or HTTP transport
+- CLI tool `mcp-quality-gate validate` for testing any MCP server via stdio or HTTP transport
 - 17 compliance tests across 4 categories: lifecycle (3), tools (7), resources (4), prompts (3)
 - Quality analyzer: parameter description coverage, description length checks, deprecated tool detection, duplicate schema detection, required/default mismatch
 - Security analyzer: environment variable exposure detection, code execution surface detection, dangerous default pattern detection
