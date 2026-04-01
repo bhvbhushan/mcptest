@@ -35,3 +35,6 @@ coverage/
 **/CLAUDE.md
 
 docs/*
+
+# MCP server test artifacts
+.playwright-mcp/
