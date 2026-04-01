@@ -98,6 +98,34 @@ npm run build     # Must succeed
 - One approval required for merge
 - Squash merge to keep history clean
 
+## Releasing
+
+Releases are automated via CI. To publish a new version:
+
+1. **Bump the version** in `package.json` following semver:
+   - `PATCH` for bug fixes, new tests, docs
+   - `MINOR` for new analyzers, reporters, CLI flags
+   - `MAJOR` for breaking API changes or scoring formula changes
+
+2. **Update CHANGELOG.md** with the new version entry
+
+3. **Merge to `main`** — CI will automatically:
+   - Run lint, tests, and build
+   - Publish to npm with [provenance](https://docs.npmjs.com/generating-provenance-statements)
+   - Create a GitHub Release with auto-generated notes
+   - Tag the release as `v{version}`
+
+### Manual Publish (not recommended)
+
+```bash
+npm run lint && npm run build && npm test   # prepublishOnly runs this automatically
+npm publish --provenance --access public
+```
+
+### Required Secrets
+
+The publish workflow requires `NPM_TOKEN` configured as a GitHub repository secret. Generate one at [npmjs.com/settings/tokens](https://www.npmjs.com/settings/tokens) with "Automation" type.
+
 ## Questions?
 
 Use [GitHub Discussions](https://github.com/bhvbhushan/mcptest/discussions) for questions, not issues.
