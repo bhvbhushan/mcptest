@@ -3,6 +3,8 @@ import { runTests } from "../../src/core/runner.js";
 import { mockTest, mockContext } from "../helpers.js";
 import type { MCPTest } from "../../src/core/types.js";
 import type { EfficiencyResult } from "../../src/efficiency/types.js";
+import type { QualityResult } from "../../src/quality/types.js";
+import type { SecurityResult } from "../../src/security/types.js";
 
 describe("runTests", () => {
   const ctx = mockContext();
@@ -26,7 +28,7 @@ describe("runTests", () => {
       mockTest("t3", "fail"),
     ];
     const result = await runTests(tests, ctx);
-    expect(result.score).toBe(67); // Math.round(2/3 * 100)
+    expect(result.score).toBe(27); // Math.round(2/3 * 40)
   });
 
   it("returns score 0 for empty test suite", async () => {
@@ -75,7 +77,7 @@ describe("runTests", () => {
     const tests = [mockTest("t1", "pass"), mockTest("t2", "fail")];
     const result = await runTests(tests, ctx, { skip: ["t2"] });
     // Only t1 ran and passed, t2 was skipped
-    expect(result.score).toBe(100);
+    expect(result.score).toBe(40);
   });
 
   it("records duration for each test", async () => {
@@ -121,7 +123,7 @@ describe("runTests", () => {
     it("uses simple pass-rate when no efficiency data", async () => {
       const tests = [mockTest("t1", "pass"), mockTest("t2", "fail")];
       const result = await runTests(tests, ctx);
-      expect(result.score).toBe(50); // 1/2 * 100
+      expect(result.score).toBe(20); // 1/2 * 40
       expect(result.efficiency).toBeUndefined();
     });
 
@@ -133,8 +135,8 @@ describe("runTests", () => {
         findings: [],
       };
       const result = await runTests(tests, ctx, undefined, "srv", efficiency);
-      // compliance: (2/2) * 60 = 60, efficiency: 20 - 0 = 20, total: 80
-      expect(result.score).toBe(80);
+      // compliance: (2/2) * 40 = 40, efficiency: 15 - 0 = 15, total: 55
+      expect(result.score).toBe(55);
       expect(result.efficiency).toBe(efficiency);
     });
 
@@ -154,8 +156,8 @@ describe("runTests", () => {
         ],
       };
       const result = await runTests(tests, ctx, undefined, "srv", efficiency);
-      // compliance: (1/1) * 60 = 60, efficiency: 20 - 5 = 15, total: 75
-      expect(result.score).toBe(75);
+      // compliance: (1/1) * 40 = 40, efficiency: 15 - 3 = 12, total: 52
+      expect(result.score).toBe(52);
     });
 
     it("deducts for efficiency criticals", async () => {
@@ -169,8 +171,8 @@ describe("runTests", () => {
         ],
       };
       const result = await runTests(tests, ctx, undefined, "srv", efficiency);
-      // compliance: 60, efficiency: max(0, 20 - 20) = 0, total: 60
-      expect(result.score).toBe(60);
+      // compliance: 40, efficiency: max(0, 15 - 16) = 0, total: 40
+      expect(result.score).toBe(40);
     });
 
     it("efficiency score cannot go below 0", async () => {
@@ -185,8 +187,90 @@ describe("runTests", () => {
         ],
       };
       const result = await runTests(tests, ctx, undefined, "srv", efficiency);
-      // compliance: 60, efficiency: max(0, 20 - 10 - 10 - 5) = max(0, -5) = 0
-      expect(result.score).toBe(60);
+      // compliance: 40, efficiency: max(0, 15 - 16 - 3) = max(0, -4) = 0, total: 40
+      expect(result.score).toBe(40);
+    });
+
+    it("scores 100 when all pass and all analyzers have no findings", async () => {
+      const tests = [mockTest("a", "pass"), mockTest("b", "pass")];
+      const efficiency: EfficiencyResult = { toolCount: 5, schemaTokenEstimate: 500, findings: [] };
+      const quality: QualityResult = {
+        findings: [],
+        paramDescriptionCoverage: 1,
+        toolsWithShortDescriptions: [],
+        toolsWithVerboseDescriptions: [],
+        deprecatedTools: [],
+        duplicateToolGroups: [],
+      };
+      const security: SecurityResult = { findings: [] };
+
+      const result = await runTests(tests, ctx, undefined, "test", efficiency, quality, security);
+      expect(result.score).toBe(100);
+    });
+
+    it("deducts for quality warnings and criticals", async () => {
+      const tests = [mockTest("a", "pass")];
+      const efficiency: EfficiencyResult = { toolCount: 2, schemaTokenEstimate: 100, findings: [] };
+      const quality: QualityResult = {
+        findings: [
+          { level: "warning", category: "description-quality", message: "short" },
+          { level: "critical", category: "deprecated-tools", message: "deprecated" },
+        ],
+        paramDescriptionCoverage: 0.8,
+        toolsWithShortDescriptions: ["x"],
+        toolsWithVerboseDescriptions: [],
+        deprecatedTools: ["y"],
+        duplicateToolGroups: [],
+      };
+      const security: SecurityResult = { findings: [] };
+
+      const result = await runTests(tests, ctx, undefined, "test", efficiency, quality, security);
+      // compliance = 40, quality = 25 - 2 - 5 = 18, efficiency = 15, security = 20
+      expect(result.score).toBe(93);
+    });
+
+    it("deducts for security findings", async () => {
+      const tests = [mockTest("a", "pass")];
+      const efficiency: EfficiencyResult = { toolCount: 2, schemaTokenEstimate: 100, findings: [] };
+      const quality: QualityResult = {
+        findings: [],
+        paramDescriptionCoverage: 1,
+        toolsWithShortDescriptions: [],
+        toolsWithVerboseDescriptions: [],
+        deprecatedTools: [],
+        duplicateToolGroups: [],
+      };
+      const security: SecurityResult = {
+        findings: [
+          { level: "critical", category: "env-exposure", message: "env leak", toolName: "get-env" },
+        ],
+      };
+
+      const result = await runTests(tests, ctx, undefined, "test", efficiency, quality, security);
+      // compliance = 40, quality = 25, efficiency = 15, security = 20 - 10 = 10
+      expect(result.score).toBe(90);
+    });
+
+    it("floors each dimension at 0", async () => {
+      const tests = [mockTest("a", "pass")];
+      const efficiency: EfficiencyResult = { toolCount: 2, schemaTokenEstimate: 100, findings: [] };
+      const quality: QualityResult = {
+        findings: Array.from({ length: 20 }, () => ({
+          level: "critical" as const,
+          category: "param-descriptions" as const,
+          message: "bad",
+        })),
+        paramDescriptionCoverage: 0,
+        toolsWithShortDescriptions: [],
+        toolsWithVerboseDescriptions: [],
+        deprecatedTools: [],
+        duplicateToolGroups: [],
+      };
+      const security: SecurityResult = { findings: [] };
+
+      const result = await runTests(tests, ctx, undefined, "test", efficiency, quality, security);
+      // compliance = 40, quality = max(0, 25 - 100) = 0, efficiency = 15, security = 20
+      expect(result.score).toBe(75);
     });
   });
 });
