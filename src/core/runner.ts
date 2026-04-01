@@ -33,7 +33,15 @@ export async function runTests(
     let result: TestResult;
 
     try {
-      result = await test.run(ctx);
+      result = await Promise.race([
+        test.run(ctx),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(new Error(`Test timed out after ${ctx.timeout}ms`)),
+            ctx.timeout,
+          ),
+        ),
+      ]);
       result.duration_ms = performance.now() - testStart;
     } catch (error) {
       result = {

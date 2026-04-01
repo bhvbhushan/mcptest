@@ -1,5 +1,12 @@
 import type { ServerConfig } from "../core/client.js";
 import { createMCPClient } from "../core/client.js";
+
+export class MCPTestError extends Error {
+  constructor(message: string, public exitCode: number = 1) {
+    super(message);
+    this.name = "MCPTestError";
+  }
+}
 import { runTests } from "../core/runner.js";
 import { complianceTests } from "../compliance/index.js";
 import { ConsoleReporter } from "../reporters/console.js";
@@ -62,11 +69,9 @@ export async function validateCommand(
   } catch (error) {
     const msg =
       error instanceof Error ? error.message : String(error);
-    console.error(`Error: Failed to connect to server: ${msg}`);
-    console.error(
-      "Ensure the server command is correct and the server is running.",
+    throw new MCPTestError(
+      `Failed to connect to server: ${msg}\nEnsure the server command is correct and the server is running.`
     );
-    process.exit(1);
   }
 
   try {
@@ -101,10 +106,9 @@ export async function validateCommand(
     if (options.threshold) {
       const threshold = parseInt(options.threshold, 10);
       if (result.score < threshold) {
-        console.error(
-          `\nThreshold: ${threshold} — FAIL (score: ${result.score})`,
+        throw new MCPTestError(
+          `Threshold: ${threshold} — FAIL (score: ${result.score})`
         );
-        process.exit(1);
       }
     }
   } finally {

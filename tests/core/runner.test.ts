@@ -99,4 +99,20 @@ describe("runTests", () => {
     expect(result.server).toBe("node server.js");
     expect(result.timestamp).toBeTruthy();
   });
+
+  it("times out tests that exceed context timeout", async () => {
+    const hangingTest: MCPTest = {
+      id: "hang",
+      name: "Hanging Test",
+      description: "Never resolves",
+      category: "lifecycle",
+      severity: "critical",
+      tags: [],
+      run: () => new Promise(() => {}), // never resolves
+    };
+    const shortCtx = mockContext({ timeout: 100 });
+    const result = await runTests([hangingTest], shortCtx);
+    expect(result.results[0].result.status).toBe("error");
+    expect(result.results[0].result.message).toContain("timed out");
+  });
 });

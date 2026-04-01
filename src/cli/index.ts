@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { validateCommand } from "./validate.js";
+import { validateCommand, MCPTestError } from "./validate.js";
 
 const program = new Command()
   .name("mcptest")
@@ -18,4 +18,11 @@ program
   .option("--only <tests>", "comma-separated test IDs to run")
   .action(validateCommand);
 
-program.parse();
+program.parseAsync().catch((error) => {
+  if (error instanceof MCPTestError) {
+    console.error(error.message);
+    process.exit(error.exitCode);
+  }
+  console.error(error);
+  process.exit(1);
+});

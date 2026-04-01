@@ -24,6 +24,10 @@ export async function createMCPClient(
 ): Promise<MCPClientWrapper & { close(): Promise<void> }> {
   const client = new Client({ name: "mcptest", version: "0.1.0" });
 
+  if (config.transport === "http" && !config.url) {
+    throw new Error("URL is required for HTTP transport");
+  }
+
   const transport =
     config.transport === "http"
       ? new StreamableHTTPClientTransport(new URL(config.url!))
