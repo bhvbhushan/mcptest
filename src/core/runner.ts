@@ -6,12 +6,14 @@ import type {
   SuiteResult,
   RunOptions,
 } from "./types.js";
+import type { EfficiencyResult } from "../efficiency/types.js";
 
 export async function runTests(
   tests: MCPTest[],
   ctx: TestContext,
   options?: RunOptions,
   serverLabel?: string,
+  efficiency?: EfficiencyResult,
 ): Promise<SuiteResult> {
   const start = performance.now();
   const results: TestRunResult[] = [];
@@ -54,7 +56,7 @@ export async function runTests(
     results.push({ test: pickTestMeta(test), result });
   }
 
-  return buildSuiteResult(results, performance.now() - start, serverLabel);
+  return buildSuiteResult(results, performance.now() - start, serverLabel, efficiency);
 }
 
 function pickTestMeta(
@@ -72,6 +74,7 @@ function buildSuiteResult(
   results: TestRunResult[],
   duration_ms: number,
   serverLabel?: string,
+  efficiency?: EfficiencyResult,
 ): SuiteResult {
   const passed = results.filter((r) => r.result.status === "pass").length;
   const failed = results.filter((r) => r.result.status === "fail").length;
@@ -86,6 +89,26 @@ function buildSuiteResult(
     duration_ms: Math.round(duration_ms),
     results,
     summary: { total, passed, failed, skipped, errors },
-    score: ran > 0 ? Math.round((passed / ran) * 100) : 0,
+    efficiency,
+    score: calculateScore(passed, ran, efficiency),
   };
+}
+
+function calculateScore(
+  passed: number,
+  ran: number,
+  efficiency?: EfficiencyResult,
+): number {
+  if (ran === 0) return 0;
+
+  if (!efficiency) {
+    return Math.round((passed / ran) * 100);
+  }
+
+  const complianceScore = Math.round((passed / ran) * 60);
+  const warnings = efficiency.findings.filter((f) => f.level === "warning").length;
+  const criticals = efficiency.findings.filter((f) => f.level === "critical").length;
+  const efficiencyScore = Math.max(0, 20 - warnings * 5 - criticals * 10);
+
+  return complianceScore + efficiencyScore;
 }

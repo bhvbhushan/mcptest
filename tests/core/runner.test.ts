@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { runTests } from "../../src/core/runner.js";
 import { mockTest, mockContext } from "../helpers.js";
 import type { MCPTest } from "../../src/core/types.js";
+import type { EfficiencyResult } from "../../src/efficiency/types.js";
 
 describe("runTests", () => {
   const ctx = mockContext();
@@ -114,5 +115,78 @@ describe("runTests", () => {
     const result = await runTests([hangingTest], shortCtx);
     expect(result.results[0].result.status).toBe("error");
     expect(result.results[0].result.message).toContain("timed out");
+  });
+
+  describe("weighted score calculation", () => {
+    it("uses simple pass-rate when no efficiency data", async () => {
+      const tests = [mockTest("t1", "pass"), mockTest("t2", "fail")];
+      const result = await runTests(tests, ctx);
+      expect(result.score).toBe(50); // 1/2 * 100
+      expect(result.efficiency).toBeUndefined();
+    });
+
+    it("uses weighted formula when efficiency provided", async () => {
+      const tests = [mockTest("t1", "pass"), mockTest("t2", "pass")];
+      const efficiency: EfficiencyResult = {
+        toolCount: 5,
+        schemaTokenEstimate: 1000,
+        findings: [],
+      };
+      const result = await runTests(tests, ctx, undefined, "srv", efficiency);
+      // compliance: (2/2) * 60 = 60, efficiency: 20 - 0 = 20, total: 80
+      expect(result.score).toBe(80);
+      expect(result.efficiency).toBe(efficiency);
+    });
+
+    it("deducts for efficiency warnings", async () => {
+      const tests = [mockTest("t1", "pass")];
+      const efficiency: EfficiencyResult = {
+        toolCount: 25,
+        schemaTokenEstimate: 5000,
+        findings: [
+          {
+            level: "warning",
+            category: "tool-count",
+            message: "too many",
+            value: 25,
+            threshold: 20,
+          },
+        ],
+      };
+      const result = await runTests(tests, ctx, undefined, "srv", efficiency);
+      // compliance: (1/1) * 60 = 60, efficiency: 20 - 5 = 15, total: 75
+      expect(result.score).toBe(75);
+    });
+
+    it("deducts for efficiency criticals", async () => {
+      const tests = [mockTest("t1", "pass")];
+      const efficiency: EfficiencyResult = {
+        toolCount: 55,
+        schemaTokenEstimate: 50000,
+        findings: [
+          { level: "critical", category: "tool-count", message: "", value: 55, threshold: 50 },
+          { level: "critical", category: "schema-size", message: "", value: 50000, threshold: 30000 },
+        ],
+      };
+      const result = await runTests(tests, ctx, undefined, "srv", efficiency);
+      // compliance: 60, efficiency: max(0, 20 - 20) = 0, total: 60
+      expect(result.score).toBe(60);
+    });
+
+    it("efficiency score cannot go below 0", async () => {
+      const tests = [mockTest("t1", "pass")];
+      const efficiency: EfficiencyResult = {
+        toolCount: 100,
+        schemaTokenEstimate: 100000,
+        findings: [
+          { level: "critical", category: "tool-count", message: "", value: 100, threshold: 50 },
+          { level: "critical", category: "schema-size", message: "", value: 100000, threshold: 30000 },
+          { level: "warning", category: "tool-count", message: "", value: 100, threshold: 20 },
+        ],
+      };
+      const result = await runTests(tests, ctx, undefined, "srv", efficiency);
+      // compliance: 60, efficiency: max(0, 20 - 10 - 10 - 5) = max(0, -5) = 0
+      expect(result.score).toBe(60);
+    });
   });
 });
