@@ -108,13 +108,14 @@ mcptest CLI (Commander)
 ├── MCP Client Wrapper — connects via stdio or HTTP transport
 ├── Compliance Tests — spec conformance checks (lifecycle, tools, resources, etc.)
 ├── Reporters — console (colored) and JSON output
-└── Score: (passed / total_run) × 100
+├── Efficiency Analyzer — tool count, schema token estimation, threshold findings
+└── Score: weighted composite (compliance 60% + efficiency 20%, max 80 Phase 1)
 ```
 
 ## Roadmap
 
-- **Phase 1 Week 2**: Tools, resources, prompts, protocol compliance tests + tool efficiency module
-- **Phase 1 Week 3**: Extended tests, capability refusal test, transport tests
+- **Phase 1 Week 2**: ~~Tools compliance tests + tool efficiency module~~ (done)
+- **Phase 1 Week 3**: Resources, prompts, protocol compliance tests, capability refusal test, transport tests
 - **Phase 1 Week 4**: Real-server validation, npm publish, GitHub Action, `mcptest init`
 - **Phase 2**: Security scanner (static + dynamic), registry scanner
 
