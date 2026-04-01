@@ -1,0 +1,118 @@
+import { describe, it, expect } from "vitest";
+import { runTests } from "../../src/core/runner.js";
+import { mockTest, mockContext } from "../helpers.js";
+import type { MCPTest } from "../../src/core/types.js";
+
+describe("runTests", () => {
+  const ctx = mockContext();
+
+  it("runs all tests and collects results", async () => {
+    const tests = [mockTest("t1", "pass"), mockTest("t2", "fail")];
+    const result = await runTests(tests, ctx);
+
+    expect(result.results).toHaveLength(2);
+    expect(result.summary.total).toBe(2);
+    expect(result.summary.passed).toBe(1);
+    expect(result.summary.failed).toBe(1);
+    expect(result.summary.skipped).toBe(0);
+    expect(result.summary.errors).toBe(0);
+  });
+
+  it("calculates score as percentage of passed tests", async () => {
+    const tests = [
+      mockTest("t1", "pass"),
+      mockTest("t2", "pass"),
+      mockTest("t3", "fail"),
+    ];
+    const result = await runTests(tests, ctx);
+    expect(result.score).toBe(67); // Math.round(2/3 * 100)
+  });
+
+  it("returns score 0 for empty test suite", async () => {
+    const result = await runTests([], ctx);
+    expect(result.results).toHaveLength(0);
+    expect(result.summary.total).toBe(0);
+    expect(result.score).toBe(0);
+  });
+
+  it("catches errors thrown by test run functions", async () => {
+    const errorTest: MCPTest = {
+      id: "err",
+      name: "Error Test",
+      description: "Throws",
+      category: "lifecycle",
+      severity: "critical",
+      tags: [],
+      run: async () => {
+        throw new Error("boom");
+      },
+    };
+    const result = await runTests([errorTest], ctx);
+    expect(result.results[0].result.status).toBe("error");
+    expect(result.results[0].result.message).toBe("boom");
+  });
+
+  it("marks skipped tests when using skip filter", async () => {
+    const tests = [mockTest("t1", "pass"), mockTest("t2", "pass")];
+    const result = await runTests(tests, ctx, { skip: ["t1"] });
+
+    expect(result.results[0].result.status).toBe("skip");
+    expect(result.results[1].result.status).toBe("pass");
+    expect(result.summary.skipped).toBe(1);
+    expect(result.summary.passed).toBe(1);
+  });
+
+  it("runs only specified tests when using only filter", async () => {
+    const tests = [mockTest("t1", "pass"), mockTest("t2", "pass")];
+    const result = await runTests(tests, ctx, { only: ["t1"] });
+
+    expect(result.results[0].result.status).toBe("pass");
+    expect(result.results[1].result.status).toBe("skip");
+  });
+
+  it("excludes skipped tests from score calculation", async () => {
+    const tests = [mockTest("t1", "pass"), mockTest("t2", "fail")];
+    const result = await runTests(tests, ctx, { skip: ["t2"] });
+    // Only t1 ran and passed, t2 was skipped
+    expect(result.score).toBe(100);
+  });
+
+  it("records duration for each test", async () => {
+    const slowTest: MCPTest = {
+      id: "slow",
+      name: "Slow",
+      description: "Takes time",
+      category: "lifecycle",
+      severity: "low",
+      tags: [],
+      run: async () => {
+        await new Promise((r) => setTimeout(r, 50));
+        return { status: "pass", message: "done", duration_ms: 0 };
+      },
+    };
+    const result = await runTests([slowTest], ctx);
+    expect(result.results[0].result.duration_ms).toBeGreaterThanOrEqual(40);
+  });
+
+  it("sets server and timestamp on suite result", async () => {
+    const result = await runTests([], ctx, undefined, "node server.js");
+    expect(result.server).toBe("node server.js");
+    expect(result.timestamp).toBeTruthy();
+  });
+
+  it("times out tests that exceed context timeout", async () => {
+    const hangingTest: MCPTest = {
+      id: "hang",
+      name: "Hanging Test",
+      description: "Never resolves",
+      category: "lifecycle",
+      severity: "critical",
+      tags: [],
+      run: () => new Promise(() => {}), // never resolves
+    };
+    const shortCtx = mockContext({ timeout: 100 });
+    const result = await runTests([hangingTest], shortCtx);
+    expect(result.results[0].result.status).toBe("error");
+    expect(result.results[0].result.message).toContain("timed out");
+  });
+});
